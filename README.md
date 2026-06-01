@@ -1,1 +1,1 @@
-Hi :)
+Photo mapper app
