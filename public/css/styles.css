@@ -223,6 +223,7 @@ body {
   flex-direction: column;
 }
 .timeline-controls {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -246,10 +247,68 @@ body {
   background: var(--accent);
   border-color: var(--accent);
 }
-.tl-date {
+/* Slideshow interval input next to the play button */
+.tl-interval {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--muted);
   font-size: 13px;
-  margin-left: 8px;
+}
+.tl-interval input {
+  width: 48px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 13px;
+  text-align: center;
+}
+.tl-date {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--muted);
+  font-size: 13px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Track wrapper holds the strip plus the overlay nav buttons */
+.timeline-track-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.tl-edge {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.tl-edge:hover {
+  background: var(--accent);
+}
+.tl-edge.prev {
+  left: 8px;
+}
+.tl-edge.next {
+  right: 8px;
 }
 
 .timeline-track {
@@ -257,6 +316,7 @@ body {
   display: flex;
   gap: 6px;
   overflow-x: auto;
+  overflow-x: overlay; /* float the scrollbar over the photos (Chromium) */
   overflow-y: hidden;
   padding: 8px 12px;
   scroll-behavior: smooth;
@@ -307,7 +367,10 @@ body {
 .timeline-track::-webkit-scrollbar {
   height: 8px;
 }
+.timeline-track::-webkit-scrollbar-track {
+  background: transparent;
+}
 .timeline-track::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: rgba(255, 255, 255, 0.4);
   border-radius: 4px;
 }

@@ -66,6 +66,9 @@ function step(dir) {
   selectIndex(next, { focusMap: true, openViewer: true });
 }
 
+// In map view the timeline arrows page the strip; while viewing they step.
+timeline.isViewerOpen = () => viewer.open;
+
 async function init() {
   try {
     setStatus('Loading album...');

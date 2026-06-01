@@ -58,11 +58,17 @@
     <footer class="timeline" id="timeline">
       <div class="timeline-controls">
         <button id="tl-play" title="Slideshow">&#9658;</button>
-        <button id="tl-prev" title="Previous">&#8249;</button>
-        <button id="tl-next" title="Next">&#8250;</button>
+        <label class="tl-interval" title="Seconds shown per photo/video in the slideshow">
+          <input id="tl-interval" type="number" min="1" max="60" step="1" value="3" />
+          <span>s</span>
+        </label>
         <span class="tl-date" id="tl-date"></span>
       </div>
-      <div class="timeline-track" id="timeline-track"></div>
+      <div class="timeline-track-wrap">
+        <button class="tl-edge prev" id="tl-prev" title="Previous">&#8249;</button>
+        <div class="timeline-track" id="timeline-track"></div>
+        <button class="tl-edge next" id="tl-next" title="Next">&#8250;</button>
+      </div>
     </footer>
 
     <!-- Leaflet JS -->
