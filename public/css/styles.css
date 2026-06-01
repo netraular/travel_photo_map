@@ -7,8 +7,13 @@
   --muted: #9aa0ad;
   --accent: #e8534e;
   --accent-2: #f2b705;
-  --timeline-h: 130px;
+  --timeline-h: 210px;
   --header-h: 52px;
+}
+
+/* While viewing a photo/video, shrink the timeline back to a compact size. */
+body.viewer-open {
+  --timeline-h: 130px;
 }
 
 * {
@@ -197,8 +202,8 @@ body {
   position: absolute;
   bottom: 16px;
   right: 16px;
-  width: 220px;
-  height: 160px;
+  width: 300px;
+  height: 210px;
   border-radius: 10px;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.3);

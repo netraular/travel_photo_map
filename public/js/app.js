@@ -81,6 +81,7 @@ async function init() {
 
     map.setAssets(assets);
     timeline.setAssets(assets);
+    viewer.setAssets(assets);
 
     const onMap = assets.filter((a) => a.onMap).length;
     const noGps = assets.length - onMap;

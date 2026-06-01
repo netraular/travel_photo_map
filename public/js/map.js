@@ -6,19 +6,22 @@ const TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 const TILE_ATTR = '&copy; OpenStreetMap &copy; CARTO';
 
 // If a cluster has fewer photos than this, clicking it spreads the
-// thumbnails (spiderfy) instead of zooming in.
-const SPIDERFY_THRESHOLD = 20;
+// thumbnails (spiderfy) instead of zooming in. A higher value means less
+// zooming is needed before a node opens into the spread (spider) view.
+const SPIDERFY_THRESHOLD = 50;
 
 const MARKER_SIZE = 58;
+// Thumbnails are enlarged while a cluster is spread open (spider view).
+const SPIDER_MARKER_SIZE = 104;
 
-function markerIcon(asset) {
+function markerIcon(asset, size = MARKER_SIZE) {
   const cls = asset.type === 'VIDEO' ? 'photo-marker video' : 'photo-marker';
-  const html = `<img class="${cls}" src="${thumbUrl(asset.id, 'thumbnail')}" alt="" loading="lazy" />`;
+  const html = `<img class="${cls}" style="width:${size}px;height:${size}px" src="${thumbUrl(asset.id, 'thumbnail')}" alt="" loading="lazy" />`;
   return L.divIcon({
     html,
     className: '',
-    iconSize: [MARKER_SIZE, MARKER_SIZE],
-    iconAnchor: [MARKER_SIZE / 2, MARKER_SIZE / 2],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   });
 }
 
@@ -63,6 +66,18 @@ export class MapView {
       }
     });
 
+    // Enlarge thumbnails while spread open, restore their size afterwards.
+    this.cluster.on('spiderfied', (e) => {
+      for (const m of e.markers) {
+        if (m._asset) m.setIcon(markerIcon(m._asset, SPIDER_MARKER_SIZE));
+      }
+    });
+    this.cluster.on('unspiderfied', (e) => {
+      for (const m of e.markers) {
+        if (m._asset) m.setIcon(markerIcon(m._asset, MARKER_SIZE));
+      }
+    });
+
     this.map.addLayer(this.cluster);
 
     this.map.setView([36.2, 138.2], 5); // Japan by default
@@ -76,6 +91,7 @@ export class MapView {
     for (const a of assets) {
       if (!a.onMap || a.mapLat == null || a.mapLng == null) continue;
       const marker = L.marker([a.mapLat, a.mapLng], { icon: markerIcon(a) });
+      marker._asset = a;
       marker.on('click', () => this.onSelect && this.onSelect(a));
       this.cluster.addLayer(marker);
       this.markers.set(a.id, marker);
@@ -102,12 +118,15 @@ export class MapView {
   }
 }
 
-/** Static mini-map for the viewer overlay. */
+/** Static mini-map for the viewer overlay, showing the trip trajectory. */
 export class MiniMap {
   constructor(elId) {
     this.elId = elId;
     this.map = null;
     this.marker = null;
+    this.routeLine = null;
+    this.windowLayer = null;
+    this.route = []; // on-map assets in chronological order
   }
 
   ensure() {
@@ -124,6 +143,22 @@ export class MiniMap {
     L.tileLayer(TILE_URL, { maxZoom: 19 }).addTo(this.map);
   }
 
+  /** Provide all on-map assets so the trajectory can be drawn. */
+  setRoute(assets) {
+    this.route = (assets || []).filter((a) => a.onMap && a.mapLat != null);
+  }
+
+  /** Draws the full trip path once (thin connecting line). */
+  drawRoute() {
+    if (this.routeLine || this.route.length < 2) return;
+    const latlngs = this.route.map((a) => [a.mapLat, a.mapLng]);
+    this.routeLine = L.polyline(latlngs, {
+      color: '#f2b705',
+      weight: 2,
+      opacity: 0.45,
+    }).addTo(this.map);
+  }
+
   show(asset) {
     const el = document.getElementById(this.elId);
     if (!asset || asset.mapLat == null) {
@@ -132,14 +167,54 @@ export class MiniMap {
     }
     el.classList.remove('hidden');
     this.ensure();
-    this.map.setView([asset.mapLat, asset.mapLng], 11);
-    if (this.marker) this.marker.remove();
-    this.marker = L.circleMarker([asset.mapLat, asset.mapLng], {
-      radius: 7,
-      color: '#e8534e',
-      fillColor: '#e8534e',
-      fillOpacity: 0.9,
-    }).addTo(this.map);
+    this.drawRoute();
+
+    // Highlight the photos around the current one so the route ahead is visible.
+    if (this.windowLayer) this.windowLayer.remove();
+    const idx = this.route.indexOf(asset);
+    const layers = [];
+    const pts = [];
+
+    if (idx >= 0) {
+      const from = Math.max(0, idx - 3);
+      const to = Math.min(this.route.length, idx + 12);
+      for (let i = from; i < to; i++) {
+        const a = this.route[i];
+        pts.push([a.mapLat, a.mapLng]);
+        if (i === idx) continue;
+        // Upcoming photos brighter, past photos dimmer.
+        const ahead = i > idx;
+        layers.push(
+          L.circleMarker([a.mapLat, a.mapLng], {
+            radius: ahead ? 4 : 3,
+            color: ahead ? '#f2b705' : '#9aa0ad',
+            fillColor: ahead ? '#f2b705' : '#9aa0ad',
+            fillOpacity: ahead ? 0.9 : 0.6,
+            weight: 0,
+          })
+        );
+      }
+    }
+
+    // Current position on top.
+    layers.push(
+      L.circleMarker([asset.mapLat, asset.mapLng], {
+        radius: 7,
+        color: '#fff',
+        weight: 2,
+        fillColor: '#e8534e',
+        fillOpacity: 1,
+      })
+    );
+
+    this.windowLayer = L.layerGroup(layers).addTo(this.map);
+
+    pts.push([asset.mapLat, asset.mapLng]);
+    if (pts.length > 1) {
+      this.map.fitBounds(L.latLngBounds(pts).pad(0.3), { maxZoom: 12, animate: false });
+    } else {
+      this.map.setView([asset.mapLat, asset.mapLng], 11);
+    }
     setTimeout(() => this.map.invalidateSize(), 60);
   }
 

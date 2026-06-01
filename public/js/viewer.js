@@ -43,6 +43,11 @@ export class Viewer {
     });
   }
 
+  /** Provide the full asset list so the mini-map can draw the trajectory. */
+  setAssets(assets) {
+    this.miniMap.setRoute(assets);
+  }
+
   show(asset) {
     this.current = asset;
     this.content.innerHTML = '';
@@ -69,6 +74,7 @@ export class Viewer {
 
     if (!this.open) {
       this.open = true;
+      document.body.classList.add('viewer-open');
       this.mapArea.classList.add('hidden');
       this.area.classList.remove('hidden');
       this.cb.onOpen && this.cb.onOpen();
@@ -83,6 +89,7 @@ export class Viewer {
   close() {
     if (!this.open) return;
     this.open = false;
+    document.body.classList.remove('viewer-open');
     // Stop any playing video.
     const video = this.content.querySelector('video');
     if (video) video.pause();
