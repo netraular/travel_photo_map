@@ -32,9 +32,37 @@ export class Timeline {
     this.playBtn = document.getElementById('tl-play');
     this.intervalInput = document.getElementById('tl-interval');
 
+    // Called when the user scrolls the strip (wheel or scrollbar) so the app
+    // can select the photo scrolled into the centre.
+    this.onScrub = () => {};
+    this._suppressScroll = false;
+    this._suppressTimer = null;
+    this._scrollTimer = null;
+
     document.getElementById('tl-prev').addEventListener('click', () => this.nav(-1));
     document.getElementById('tl-next').addEventListener('click', () => this.nav(1));
     this.playBtn.addEventListener('click', () => this.togglePlay());
+
+    // Mouse wheel over the strip scrolls it horizontally.
+    this.track.addEventListener(
+      'wheel',
+      (e) => {
+        if (!this.assets.length) return;
+        const delta = e.deltaY || e.deltaX;
+        if (!delta) return;
+        e.preventDefault();
+        this.track.scrollLeft += delta;
+      },
+      { passive: false }
+    );
+
+    // Scrolling the strip (wheel or dragging the scrollbar) selects the photo
+    // that ends up centred, once the scrolling settles.
+    this.track.addEventListener('scroll', () => {
+      if (this._suppressScroll) return;
+      if (this._scrollTimer) clearTimeout(this._scrollTimer);
+      this._scrollTimer = setTimeout(() => this.selectCentered(), 90);
+    });
 
     this.intervalInput.addEventListener('change', () => {
       const secs = parseFloat(this.intervalInput.value);
@@ -87,10 +115,42 @@ export class Timeline {
     const el = items[index];
     if (el) {
       el.classList.add('active');
-      el.scrollIntoView({ inline: align, block: 'nearest' });
+      this._scrollTo(el, align);
     }
     const a = this.assets[index];
     this.dateLabel.textContent = caption(a);
+  }
+
+  /** Scrolls an item into view while suppressing the scroll-driven selection. */
+  _scrollTo(el, align = 'center') {
+    this._suppressScroll = true;
+    el.scrollIntoView({ inline: align, block: 'nearest' });
+    if (this._suppressTimer) clearTimeout(this._suppressTimer);
+    this._suppressTimer = setTimeout(() => {
+      this._suppressScroll = false;
+    }, 160);
+  }
+
+  /** Selects the photo currently closest to the centre of the visible strip. */
+  selectCentered() {
+    if (!this.assets.length) return;
+    const track = this.track;
+    const center = track.scrollLeft + track.clientWidth / 2;
+    const items = track.children;
+    let bestIdx = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < items.length; i++) {
+      const el = items[i];
+      const elCenter = el.offsetLeft + el.offsetWidth / 2;
+      const d = Math.abs(elCenter - center);
+      if (d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx >= 0 && bestIdx !== this.activeIndex) {
+      this.onScrub(bestIdx);
+    }
   }
 
   /** How many thumbnails fit across the visible track. */
@@ -99,6 +159,17 @@ export class Timeline {
     if (!item) return 1;
     const w = item.getBoundingClientRect().width + 6; // include gap
     return Math.max(1, Math.floor(this.track.clientWidth / w));
+  }
+
+  /**
+   * Re-scrolls the active thumbnail into view. Needed after the timeline
+   * height changes (entering / leaving the full-screen viewer) since the item
+   * sizes change and the previous scroll position no longer centers it.
+   */
+  recenter() {
+    if (this.activeIndex < 0) return;
+    const el = this.track.children[this.activeIndex];
+    if (el) this._scrollTo(el, 'center');
   }
 
   /**

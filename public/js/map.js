@@ -8,7 +8,16 @@ const TILE_ATTR = '&copy; OpenStreetMap &copy; CARTO';
 // If a cluster has fewer photos than this, clicking it spreads the
 // thumbnails (spiderfy) instead of zooming in. A higher value means less
 // zooming is needed before a node opens into the spread (spider) view.
-const SPIDERFY_THRESHOLD = 50;
+const SPIDERFY_THRESHOLD = 60;
+
+// Once the map is at least this zoomed in, clicking a cluster spreads it
+// (spider) instead of zooming further, so images stop subdividing so much.
+const SPIDERFY_AT_ZOOM = 13;
+// Safety cap so we never try to spread an enormous cluster.
+const MAX_SPIDER_COUNT = 140;
+
+// Do not let the map zoom in too far (keeps photos grouped / spidered).
+const MAX_MAP_ZOOM = 16;
 
 const MARKER_SIZE = 58;
 // Thumbnails are enlarged while a cluster is spread open (spider view).
@@ -33,8 +42,10 @@ export class MapView {
   constructor(elId, onSelect) {
     this.onSelect = onSelect;
     this.markers = new Map(); // assetId -> marker
+    this.selectedId = null;
+    this._selectedMarker = null;
 
-    this.map = L.map(elId, { zoomControl: true, keyboard: false });
+    this.map = L.map(elId, { zoomControl: true, keyboard: false, maxZoom: MAX_MAP_ZOOM });
     L.tileLayer(TILE_URL, { attribution: TILE_ATTR, maxZoom: 19 }).addTo(this.map);
 
     this.cluster = L.markerClusterGroup({
@@ -58,8 +69,9 @@ export class MapView {
       const subClusters = cluster._childClusters ? cluster._childClusters.length : 0;
       const looseMarkers = cluster._markers ? cluster._markers.length : 0;
       const splitsWhenZoomed = subClusters + looseMarkers > 1;
+      const zoomedIn = this.map.getZoom() >= SPIDERFY_AT_ZOOM && count <= MAX_SPIDER_COUNT;
 
-      if (count < SPIDERFY_THRESHOLD || !splitsWhenZoomed) {
+      if (count < SPIDERFY_THRESHOLD || !splitsWhenZoomed || zoomedIn) {
         cluster.spiderfy();
       } else {
         cluster.zoomToBounds({ padding: [40, 40] });
@@ -70,11 +82,17 @@ export class MapView {
     this.cluster.on('spiderfied', (e) => {
       for (const m of e.markers) {
         if (m._asset) m.setIcon(markerIcon(m._asset, SPIDER_MARKER_SIZE));
+        if (m._asset && m._asset.id === this.selectedId && m._icon) {
+          m._icon.classList.add('is-selected');
+        }
       }
     });
     this.cluster.on('unspiderfied', (e) => {
       for (const m of e.markers) {
         if (m._asset) m.setIcon(markerIcon(m._asset, MARKER_SIZE));
+        if (m._asset && m._asset.id === this.selectedId && m._icon) {
+          m._icon.classList.add('is-selected');
+        }
       }
     });
 
@@ -111,6 +129,42 @@ export class MapView {
     });
     const marker = this.markers.get(asset.id);
     if (marker) this.cluster.zoomToShowLayer(marker, () => {});
+    this.setSelected(asset);
+  }
+
+  /**
+   * Highlights the marker of the given asset and reveals it on the map
+   * (un-clustering / spiderfying if needed) without forcing a deep zoom.
+   */
+  setSelected(asset) {
+    // Clear any previous highlight (a marker may have been re-rendered, so
+    // remove the class from every currently shown marker to be safe).
+    document
+      .querySelectorAll('.leaflet-marker-icon.is-selected')
+      .forEach((el) => el.classList.remove('is-selected'));
+    if (this._selectedMarker) this._selectedMarker.setZIndexOffset(0);
+    this._selectedMarker = null;
+    this.selectedId = asset ? asset.id : null;
+    if (!asset) return;
+
+    const marker = this.markers.get(asset.id);
+    if (!marker) return;
+    this._selectedMarker = marker;
+    // Raise it above its neighbours so it sits on top in the spider view.
+    marker.setZIndexOffset(1000);
+
+    const targetId = asset.id;
+    const highlight = () => {
+      // Selection may have changed while the cluster was revealing (async).
+      if (this.selectedId !== targetId) return;
+      document
+        .querySelectorAll('.leaflet-marker-icon.is-selected')
+        .forEach((el) => el.classList.remove('is-selected'));
+      if (marker._icon) marker._icon.classList.add('is-selected');
+    };
+    // zoomToShowLayer reveals the marker if it is hidden inside a cluster
+    // (zooming / spiderfying as needed) and calls back once it is visible.
+    this.cluster.zoomToShowLayer(marker, highlight);
   }
 
   invalidate() {
