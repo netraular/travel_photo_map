@@ -38,6 +38,7 @@ export class Timeline {
     this._suppressScroll = false;
     this._suppressTimer = null;
     this._scrollTimer = null;
+    this._io = null;
 
     document.getElementById('tl-prev').addEventListener('click', () => this.nav(-1));
     document.getElementById('tl-next').addEventListener('click', () => this.nav(1));
@@ -79,6 +80,28 @@ export class Timeline {
   setAssets(assets) {
     this.assets = assets;
     this.track.innerHTML = '';
+    if (this._io) this._io.disconnect();
+
+    // Virtualize the strip: thumbnails only load while they are near the
+    // viewport and are released again once far away, so scrolling through
+    // thousands of photos stays light on memory. The square item size comes
+    // from CSS (aspect-ratio), so layout/scroll math is stable even before an
+    // image has loaded.
+    this._io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const img = entry.target.querySelector('img');
+          if (!img) continue;
+          if (entry.isIntersecting) {
+            if (!img.src) img.src = img.dataset.src;
+          } else if (img.src) {
+            img.removeAttribute('src');
+          }
+        }
+      },
+      { root: this.track, rootMargin: '0px 600px', threshold: 0 }
+    );
+
     assets.forEach((a, i) => {
       const item = document.createElement('div');
       item.className = 'tl-item' + (a.onMap ? '' : ' no-gps');
@@ -86,7 +109,7 @@ export class Timeline {
 
       const img = document.createElement('img');
       img.loading = 'lazy';
-      img.src = thumbUrl(a.id, 'thumbnail');
+      img.dataset.src = thumbUrl(a.id, 'thumbnail');
       img.alt = a.fileName || '';
       item.appendChild(img);
 
@@ -102,6 +125,7 @@ export class Timeline {
         this.onSelect && this.onSelect(a, i);
       });
       this.track.appendChild(item);
+      this._io.observe(item);
     });
   }
 

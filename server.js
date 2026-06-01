@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Readable } from 'node:stream';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -23,10 +24,11 @@ if (!IMMICH_URL || !IMMICH_API_KEY || !ALBUM_ID) {
 const app = express();
 
 /**
- * Forwards a request to Immich with the API key and returns the response
- * (including binaries and Range info for video).
+ * Forwards a request to Immich with the API key and streams the response back
+ * (including binaries and Range info for video). When `cache` is true a
+ * long-lived immutable cache header is added (asset IDs never change).
  */
-async function proxy(res, immichPath, { headers = {} } = {}) {
+async function proxy(res, immichPath, { headers = {}, cache = false } = {}) {
   const url = `${IMMICH_URL}${immichPath}`;
   let upstream;
   try {
@@ -41,9 +43,15 @@ async function proxy(res, immichPath, { headers = {} } = {}) {
 
   res.status(upstream.status);
   // Copy relevant headers for images/video
-  for (const h of ['content-type', 'content-length', 'content-range', 'accept-ranges', 'cache-control']) {
+  for (const h of ['content-type', 'content-length', 'content-range', 'accept-ranges']) {
     const v = upstream.headers.get(h);
     if (v) res.setHeader(h, v);
+  }
+  if (cache && upstream.ok) {
+    res.setHeader('cache-control', 'public, max-age=31536000, immutable');
+  } else {
+    const v = upstream.headers.get('cache-control');
+    if (v) res.setHeader('cache-control', v);
   }
 
   if (!upstream.body) {
@@ -51,14 +59,15 @@ async function proxy(res, immichPath, { headers = {} } = {}) {
     return;
   }
 
-  try {
-    const buf = Buffer.from(await upstream.arrayBuffer());
-    res.end(buf);
-  } catch (err) {
-    console.error('[proxy] error reading response:', err.message);
+  // Stream the body straight through instead of buffering it in memory.
+  const nodeStream = Readable.fromWeb(upstream.body);
+  nodeStream.on('error', (err) => {
+    console.error('[proxy] stream error:', err.message);
     if (!res.headersSent) res.status(502);
     res.end();
-  }
+  });
+  res.on('close', () => nodeStream.destroy());
+  nodeStream.pipe(res);
 }
 
 // Album info (JSON with assets and exifInfo)
@@ -81,12 +90,12 @@ app.get('/api/album', async (_req, res) => {
 // Thumbnail: size = thumbnail (small) | preview (medium)
 app.get('/api/thumb/:id', (req, res) => {
   const size = req.query.size === 'preview' ? 'preview' : 'thumbnail';
-  return proxy(res, `/api/assets/${req.params.id}/thumbnail?size=${size}`);
+  return proxy(res, `/api/assets/${req.params.id}/thumbnail?size=${size}`, { cache: true });
 });
 
 // Original image (full size)
 app.get('/api/original/:id', (req, res) => {
-  return proxy(res, `/api/assets/${req.params.id}/original`);
+  return proxy(res, `/api/assets/${req.params.id}/original`, { cache: true });
 });
 
 // Video playback (supports Range for streaming)

@@ -27,8 +27,29 @@
   <body>
     <header class="app-header">
       <h1>Japan <span class="subtitle">map &amp; timeline</span></h1>
-      <div class="header-info" id="header-info"></div>
+      <div class="header-right">
+        <div class="header-info" id="header-info"></div>
+        <button class="help-btn" id="help-btn" title="Controls help (?)" aria-label="Controls help">?</button>
+      </div>
     </header>
+
+    <!-- Controls help overlay -->
+    <div class="help-overlay hidden" id="help-overlay">
+      <div class="help-panel" role="dialog" aria-label="Controls help">
+        <button class="help-close" id="help-close" title="Close" aria-label="Close">&times;</button>
+        <h2>Controls</h2>
+        <ul>
+          <li><kbd>&larr;</kbd> / <kbd>&rarr;</kbd> &mdash; previous / next photo</li>
+          <li><kbd>&uarr;</kbd> / <kbd>&darr;</kbd> &mdash; jump a page of photos</li>
+          <li><b>Scroll</b> over the timeline (wheel, scrollbar or touch) &mdash; the centred photo gets selected</li>
+          <li><kbd>Enter</kbd> &mdash; open the full-screen viewer</li>
+          <li><kbd>Space</kbd> &mdash; play / pause the slideshow</li>
+          <li>In the viewer: <kbd>&larr;</kbd> / <kbd>&rarr;</kbd> to navigate, <kbd>Esc</kbd> to exit full screen</li>
+          <li><b>Swipe</b> the photo (touch) &mdash; previous / next</li>
+          <li><kbd>?</kbd> &mdash; toggle this help</li>
+        </ul>
+      </div>
+    </div>
 
     <!-- Loading / error state -->
     <div id="status" class="status">Loading album...</div>
@@ -61,6 +82,7 @@
 
       <!-- Split-view preview: shows the selected photo next to the map -->
       <section class="preview-pane" id="preview-pane">
+        <button class="preview-close" id="preview-close" title="Close preview" aria-label="Close preview">&times;</button>
         <button class="preview-expand" id="preview-expand" title="Fullscreen viewer">&#9974;</button>
         <div class="preview-content" id="preview-content"></div>
       </section>

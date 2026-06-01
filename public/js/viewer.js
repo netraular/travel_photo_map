@@ -1,6 +1,7 @@
 // Viewer: replaces the map area with the photo/video, with a mini-map overlay.
 import { originalUrl, videoUrl } from './api.js';
 import { MiniMap } from './map.js';
+import { addSwipe } from './util.js';
 
 export class Viewer {
   /**
@@ -29,6 +30,13 @@ export class Viewer {
       else if (e.key === 'ArrowLeft') cb.onPrev && cb.onPrev();
       else if (e.key === 'ArrowRight') cb.onNext && cb.onNext();
     });
+
+    // Touch: swipe left/right to go to the next/previous photo.
+    addSwipe(
+      this.content,
+      () => cb.onPrev && cb.onPrev(),
+      () => cb.onNext && cb.onNext()
+    );
   }
 
   /** Provide the full asset list so the mini-map can draw the trajectory. */

@@ -4,6 +4,7 @@ import { inferCoordinates } from './geo.js';
 import { MapView } from './map.js';
 import { Timeline } from './timeline.js';
 import { Viewer } from './viewer.js';
+import { addSwipe } from './util.js';
 
 const state = {
   assets: [],
@@ -15,14 +16,31 @@ const headerInfo = document.getElementById('header-info');
 const stageEl = document.getElementById('stage');
 const previewContent = document.getElementById('preview-content');
 
-function setStatus(msg, isError = false) {
+function setStatus(msg, { error = false, loading = false, retry = false } = {}) {
   if (!msg) {
     statusEl.classList.add('hidden');
     return;
   }
-  statusEl.textContent = msg;
-  statusEl.classList.toggle('error', isError);
+  statusEl.classList.toggle('error', error);
   statusEl.classList.remove('hidden');
+  statusEl.innerHTML = '';
+
+  if (loading) {
+    const spinner = document.createElement('span');
+    spinner.className = 'spinner';
+    statusEl.appendChild(spinner);
+  }
+  const text = document.createElement('span');
+  text.textContent = msg;
+  statusEl.appendChild(text);
+
+  if (retry) {
+    const btn = document.createElement('button');
+    btn.className = 'status-retry';
+    btn.textContent = 'Retry';
+    btn.addEventListener('click', () => init());
+    statusEl.appendChild(btn);
+  }
 }
 
 function selectIndex(index, { focusMap = true, openViewer = false } = {}) {
@@ -34,8 +52,7 @@ function selectIndex(index, { focusMap = true, openViewer = false } = {}) {
   if (focusMap && asset.onMap) map.focus(asset);
   else if (asset.onMap) map.setSelected(asset);
   showPreview(asset);
-  if (openViewer) viewer.show(asset);
-  else if (viewer.open) viewer.show(asset);
+  if (openViewer || viewer.open) viewer.show(asset);
 
   // A manual change should restart the slideshow countdown.
   timeline.resetTimer();
@@ -106,6 +123,33 @@ document.getElementById('preview-expand').addEventListener('click', () => {
   if (state.activeIndex >= 0) viewer.show(state.assets[state.activeIndex]);
 });
 
+// Close button on the preview pane collapses the split back to a full map.
+document.getElementById('preview-close').addEventListener('click', () => {
+  pausePreviewVideo();
+  previewContent.innerHTML = '';
+  stageEl.classList.remove('split');
+  map.invalidate();
+});
+
+// Touch: swipe the split-view preview to move between photos.
+addSwipe(
+  previewContent,
+  () => moveSelection(-1),
+  () => moveSelection(1)
+);
+
+// Controls help overlay.
+const helpOverlay = document.getElementById('help-overlay');
+function toggleHelp(show) {
+  const open = show ?? helpOverlay.classList.contains('hidden');
+  helpOverlay.classList.toggle('hidden', !open);
+}
+document.getElementById('help-btn').addEventListener('click', () => toggleHelp(true));
+document.getElementById('help-close').addEventListener('click', () => toggleHelp(false));
+helpOverlay.addEventListener('click', (e) => {
+  if (e.target === helpOverlay) toggleHelp(false);
+});
+
 function step(dir) {
   let next = state.activeIndex + dir;
   if (next < 0) next = state.assets.length - 1;
@@ -124,6 +168,16 @@ timeline.onScrub = (index) => moveTo(index);
 document.addEventListener('keydown', (e) => {
   const tag = e.target.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+  if (e.key === '?') {
+    e.preventDefault();
+    toggleHelp();
+    return;
+  }
+  if (e.key === 'Escape' && !helpOverlay.classList.contains('hidden')) {
+    toggleHelp(false);
+    return;
+  }
 
   if (e.code === 'Space') {
     e.preventDefault();
@@ -187,14 +241,14 @@ function moveTo(index) {
 
 async function init() {
   try {
-    setStatus('Loading album...');
+    setStatus('Loading album...', { loading: true });
     const album = await loadAlbum();
     let assets = normalizeAssets(album);
     assets = inferCoordinates(assets);
     state.assets = assets;
 
     if (!assets.length) {
-      setStatus('The album has no items or could not be read.', true);
+      setStatus('The album has no items or could not be read.', { error: true, retry: true });
       return;
     }
 
@@ -211,7 +265,7 @@ async function init() {
     setStatus(null);
   } catch (err) {
     console.error(err);
-    setStatus(err.message || 'Error loading the album.', true);
+    setStatus(err.message || 'Error loading the album.', { error: true, retry: true });
   }
 }
 

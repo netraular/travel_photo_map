@@ -35,6 +35,32 @@ npm start
 
 Open http://localhost:3000
 
+## Privacy & security
+
+This app is intended to run **locally / on a private network only**. Keep these
+points in mind:
+
+- The album is served full-resolution and may contain **personal documents**
+  (passports, boarding passes, tickets, etc.). Do **not** expose this server to
+  the public internet without adding authentication.
+- The `.env` file holds your Immich **API key** in plain text. It is read only by
+  the Node backend and is **never sent to the browser** (the backend proxies all
+  Immich requests), but you should still keep `.env` out of version control.
+- Cached images are marked `immutable`; clear your browser cache if you need to
+  remove locally cached copies of sensitive photos.
+
+## Controls
+
+- **Arrow Left / Right** — previous / next photo.
+- **Arrow Up / Down** — jump a page of photos at a time.
+- **Mouse wheel / scrollbar over the timeline** — scroll through photos; the one
+  centred in the strip becomes selected (also works by touch-dragging).
+- **Enter** — open the selected photo in the full-screen viewer.
+- **Space** — start / pause the slideshow.
+- In the viewer: **Arrow Left / Right** to navigate, **Esc** (or the
+  exit-fullscreen button) to return to the split map + preview view.
+- **?** — toggle the on-screen controls help.
+
 ## Features
 
 - Dark, low-detail basemap so the photo points stand out.
