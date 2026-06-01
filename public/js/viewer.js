@@ -1,10 +1,10 @@
-// Visor: sustituye el area del mapa por la foto/video, con mini-mapa en overlay.
+// Viewer: replaces the map area with the photo/video, with a mini-map overlay.
 import { originalUrl, videoUrl } from './api.js';
 import { MiniMap } from './map.js';
 
 function fmtDate(d) {
   if (!d) return '';
-  return d.toLocaleString('es-ES', {
+  return d.toLocaleString('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -15,7 +15,7 @@ function fmtDate(d) {
 
 export class Viewer {
   /**
-   * @param {object} cb  { onPrev, onNext, onClose, onOpen }
+   * @param {object} cb  { onPrev, onNext, onClose, onOpen, onTogglePlay }
    */
   constructor(cb = {}) {
     this.cb = cb;
@@ -62,7 +62,7 @@ export class Viewer {
     }
 
     const place = [asset.city, asset.country].filter(Boolean).join(', ');
-    const gpsNote = asset.inferred ? ' (ubicacion aproximada)' : asset.onMap ? '' : ' (sin GPS)';
+    const gpsNote = asset.inferred ? ' (approximate location)' : asset.onMap ? '' : ' (no GPS)';
     this.caption.textContent = `${fmtDate(asset.date)}${place ? ' \u00b7 ' + place : ''}${gpsNote}`;
 
     this.miniMap.show(asset);
@@ -83,7 +83,7 @@ export class Viewer {
   close() {
     if (!this.open) return;
     this.open = false;
-    // Parar cualquier video.
+    // Stop any playing video.
     const video = this.content.querySelector('video');
     if (video) video.pause();
     this.content.innerHTML = '';

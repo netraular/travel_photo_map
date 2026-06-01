@@ -1,9 +1,9 @@
-// Timeline inferior: tira de miniaturas ordenadas por fecha + slideshow.
+// Bottom timeline: strip of thumbnails sorted by date + slideshow.
 import { thumbUrl } from './api.js';
 
 function fmtDate(d) {
   if (!d) return '';
-  return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export class Timeline {
@@ -89,7 +89,7 @@ export class Timeline {
     if (!this.assets.length) return;
     this.playing = true;
     this.playBtn.classList.add('active');
-    this.playBtn.innerHTML = '&#10073;&#10073;'; // pausa
+    this.playBtn.innerHTML = '&#10073;&#10073;'; // pause
     this.timer = setInterval(() => this.step(1), this.intervalMs);
     if (this.activeIndex < 0) this.step(1);
   }

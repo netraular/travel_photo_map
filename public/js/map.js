@@ -1,24 +1,31 @@
-// Mapa principal (Leaflet + markercluster) y mini-mapa del visor.
+// Main map (Leaflet + markercluster) and the viewer mini-map.
 import { thumbUrl } from './api.js';
 
-// Mapa oscuro y con poco detalle para que destaquen los puntos con fotos.
+// Dark, low-detail basemap so photo points stand out.
 const TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
 const TILE_ATTR = '&copy; OpenStreetMap &copy; CARTO';
 
-// Si un cluster tiene menos fotos que esto, al pulsarlo se despliegan
-// las miniaturas (spiderfy) en vez de hacer zoom.
+// If a cluster has fewer photos than this, clicking it spreads the
+// thumbnails (spiderfy) instead of zooming in.
 const SPIDERFY_THRESHOLD = 20;
+
+const MARKER_SIZE = 58;
 
 function markerIcon(asset) {
   const cls = asset.type === 'VIDEO' ? 'photo-marker video' : 'photo-marker';
   const html = `<img class="${cls}" src="${thumbUrl(asset.id, 'thumbnail')}" alt="" loading="lazy" />`;
-  return L.divIcon({ html, className: '', iconSize: [46, 46], iconAnchor: [23, 23] });
+  return L.divIcon({
+    html,
+    className: '',
+    iconSize: [MARKER_SIZE, MARKER_SIZE],
+    iconAnchor: [MARKER_SIZE / 2, MARKER_SIZE / 2],
+  });
 }
 
 export class MapView {
   /**
-   * @param {string} elId  id del contenedor del mapa
-   * @param {(asset)=>void} onSelect callback al pulsar un marcador
+   * @param {string} elId  map container id
+   * @param {(asset)=>void} onSelect callback when a marker is clicked
    */
   constructor(elId, onSelect) {
     this.onSelect = onSelect;
@@ -32,12 +39,24 @@ export class MapView {
       showCoverageOnHover: false,
       zoomToBoundsOnClick: false,
       spiderfyOnMaxZoom: true,
+      // Spread spiderfied thumbnails further apart so they are easy to see.
+      spiderfyDistanceMultiplier: 2.6,
     });
 
-    // Al pulsar un cluster: pocas fotos -> desplegar previews; muchas -> zoom.
+    // When a cluster is clicked: few photos OR a cluster that does not actually
+    // split into several sub-clusters when zoomed -> spread the thumbnails;
+    // otherwise zoom in (the photos are spread out and will separate).
     this.cluster.on('clusterclick', (e) => {
       const cluster = e.layer;
-      if (cluster.getAllChildMarkers().length < SPIDERFY_THRESHOLD) {
+      const count = cluster.getAllChildMarkers().length;
+
+      // Immediate children at the next zoom level: sub-clusters + loose markers.
+      // If there is only one, zooming keeps a single node, so spreading is better.
+      const subClusters = cluster._childClusters ? cluster._childClusters.length : 0;
+      const looseMarkers = cluster._markers ? cluster._markers.length : 0;
+      const splitsWhenZoomed = subClusters + looseMarkers > 1;
+
+      if (count < SPIDERFY_THRESHOLD || !splitsWhenZoomed) {
         cluster.spiderfy();
       } else {
         cluster.zoomToBounds({ padding: [40, 40] });
@@ -46,7 +65,7 @@ export class MapView {
 
     this.map.addLayer(this.cluster);
 
-    this.map.setView([36.2, 138.2], 5); // Japon por defecto
+    this.map.setView([36.2, 138.2], 5); // Japan by default
   }
 
   setAssets(assets) {
@@ -68,7 +87,7 @@ export class MapView {
     }
   }
 
-  /** Centra y abre el marcador del asset indicado. */
+  /** Centers and opens the marker for the given asset. */
   focus(asset) {
     if (!asset || asset.mapLat == null) return;
     this.map.setView([asset.mapLat, asset.mapLng], Math.max(this.map.getZoom(), 12), {
@@ -83,7 +102,7 @@ export class MapView {
   }
 }
 
-/** Mini-mapa estatico para el overlay del visor. */
+/** Static mini-map for the viewer overlay. */
 export class MiniMap {
   constructor(elId) {
     this.elId = elId;

@@ -1,7 +1,7 @@
 {
   "name": "travel-photo-map",
   "version": "1.0.0",
-  "description": "Visualiza fotos y videos de un album de Immich en un mapa y una timeline.",
+  "description": "Visualize photos and videos from an Immich album on a map and a timeline.",
   "type": "module",
   "scripts": {
     "start": "node server.js"

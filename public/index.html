@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Travel Photo Map - Japon</title>
+    <title>Travel Photo Map - Japan</title>
 
     <!-- Leaflet -->
     <link
@@ -26,40 +26,40 @@
   </head>
   <body>
     <header class="app-header">
-      <h1>Japon <span class="subtitle">mapa y timeline</span></h1>
+      <h1>Japan <span class="subtitle">map &amp; timeline</span></h1>
       <div class="header-info" id="header-info"></div>
     </header>
 
-    <!-- Estado de carga / error -->
-    <div id="status" class="status">Cargando album...</div>
+    <!-- Loading / error state -->
+    <div id="status" class="status">Loading album...</div>
 
     <main class="stage" id="stage">
-      <!-- Area principal: mapa -->
+      <!-- Main area: map -->
       <section class="map-area" id="map-area">
         <div id="map"></div>
       </section>
 
-      <!-- Area principal cuando se ve una foto: visor -->
+      <!-- Main area when viewing a photo: viewer -->
       <section class="viewer-area hidden" id="viewer-area">
-        <button class="viewer-close" id="viewer-close" title="Cerrar (Esc)">&times;</button>
-        <button class="viewer-nav prev" id="viewer-prev" title="Anterior">&#8249;</button>
-        <button class="viewer-nav next" id="viewer-next" title="Siguiente">&#8250;</button>
+        <button class="viewer-close" id="viewer-close" title="Close (Esc)">&times;</button>
+        <button class="viewer-nav prev" id="viewer-prev" title="Previous">&#8249;</button>
+        <button class="viewer-nav next" id="viewer-next" title="Next">&#8250;</button>
         <button class="viewer-play" id="viewer-play" title="Slideshow">&#9658;</button>
 
         <div class="viewer-content" id="viewer-content"></div>
         <div class="viewer-caption" id="viewer-caption"></div>
 
-        <!-- Mini-mapa en overlay -->
+        <!-- Mini-map overlay -->
         <div class="mini-map" id="mini-map"></div>
       </section>
     </main>
 
-    <!-- Timeline inferior -->
+    <!-- Bottom timeline -->
     <footer class="timeline" id="timeline">
       <div class="timeline-controls">
         <button id="tl-play" title="Slideshow">&#9658;</button>
-        <button id="tl-prev" title="Anterior">&#8249;</button>
-        <button id="tl-next" title="Siguiente">&#8250;</button>
+        <button id="tl-prev" title="Previous">&#8249;</button>
+        <button id="tl-next" title="Next">&#8250;</button>
         <span class="tl-date" id="tl-date"></span>
       </div>
       <div class="timeline-track" id="timeline-track"></div>
@@ -73,7 +73,7 @@
     ></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <!-- App (modulos ES) -->
+    <!-- App (ES modules) -->
     <script type="module" src="js/app.js"></script>
   </body>
 </html>

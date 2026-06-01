@@ -1,10 +1,10 @@
-// Inferencia de coordenadas para assets sin GPS:
-// se asignan las del asset con fecha mas cercana que SI tenga GPS.
-// Devuelve coordenadas "inferidas" sin sobrescribir hasGps (para poder marcarlas).
+// Coordinate inference for assets without GPS:
+// they get the coordinates of the closest-in-time asset that does have GPS.
+// Returns "inferred" coordinates without overwriting hasGps (so they can be flagged).
 
 /**
- * @param {Array} assets - lista normalizada y ordenada por fecha (api.normalizeAssets)
- * @returns assets con campos extra: inferredLat, inferredLng, mapLat, mapLng, inferred(boolean), onMap(boolean)
+ * @param {Array} assets - normalized list sorted by date (api.normalizeAssets)
+ * @returns assets with extra fields: mapLat, mapLng, inferred (boolean), onMap (boolean)
  */
 export function inferCoordinates(assets) {
   const withGps = assets.filter((a) => a.hasGps && a.date);
@@ -18,7 +18,7 @@ export function inferCoordinates(assets) {
       continue;
     }
 
-    // Sin GPS: buscar el asset con GPS de fecha mas cercana.
+    // No GPS: find the GPS asset with the closest date.
     let best = null;
     let bestDiff = Infinity;
     if (a.date) {
@@ -40,7 +40,7 @@ export function inferCoordinates(assets) {
       a.inferred = true;
       a.onMap = true;
     } else {
-      // Ningun asset del album tiene GPS -> solo timeline.
+      // No asset in the album has GPS -> timeline only.
       a.mapLat = null;
       a.mapLng = null;
       a.inferred = false;

@@ -12,10 +12,10 @@ const PORT = Number(process.env.PORT) || 3000;
 
 if (!IMMICH_URL || !IMMICH_API_KEY || !ALBUM_ID) {
   console.error(
-    '\n[ERROR] Faltan variables de entorno. Revisa el archivo .env:\n' +
-      `  IMMICH_URL=${IMMICH_URL ? 'ok' : 'FALTA'}\n` +
-      `  IMMICH_API_KEY=${IMMICH_API_KEY ? 'ok' : 'FALTA'}\n` +
-      `  ALBUM_ID=${ALBUM_ID ? 'ok' : 'FALTA'}\n`
+    '\n[ERROR] Missing environment variables. Check the .env file:\n' +
+      `  IMMICH_URL=${IMMICH_URL ? 'ok' : 'MISSING'}\n` +
+      `  IMMICH_API_KEY=${IMMICH_API_KEY ? 'ok' : 'MISSING'}\n` +
+      `  ALBUM_ID=${ALBUM_ID ? 'ok' : 'MISSING'}\n`
   );
   process.exit(1);
 }
@@ -23,8 +23,8 @@ if (!IMMICH_URL || !IMMICH_API_KEY || !ALBUM_ID) {
 const app = express();
 
 /**
- * Reenvia una peticion a Immich con la API key y devuelve la respuesta
- * (incluyendo binarios e info de Range para video).
+ * Forwards a request to Immich with the API key and returns the response
+ * (including binaries and Range info for video).
  */
 async function proxy(res, immichPath, { headers = {} } = {}) {
   const url = `${IMMICH_URL}${immichPath}`;
@@ -34,13 +34,13 @@ async function proxy(res, immichPath, { headers = {} } = {}) {
       headers: { 'x-api-key': IMMICH_API_KEY, accept: 'application/octet-stream', ...headers },
     });
   } catch (err) {
-    console.error('[proxy] error de red:', err.message);
-    res.status(502).json({ error: 'No se pudo contactar con Immich', detail: err.message });
+    console.error('[proxy] network error:', err.message);
+    res.status(502).json({ error: 'Could not reach Immich', detail: err.message });
     return;
   }
 
   res.status(upstream.status);
-  // Copiar cabeceras relevantes para imagenes/video
+  // Copy relevant headers for images/video
   for (const h of ['content-type', 'content-length', 'content-range', 'accept-ranges', 'cache-control']) {
     const v = upstream.headers.get(h);
     if (v) res.setHeader(h, v);
@@ -55,13 +55,13 @@ async function proxy(res, immichPath, { headers = {} } = {}) {
     const buf = Buffer.from(await upstream.arrayBuffer());
     res.end(buf);
   } catch (err) {
-    console.error('[proxy] error leyendo respuesta:', err.message);
+    console.error('[proxy] error reading response:', err.message);
     if (!res.headersSent) res.status(502);
     res.end();
   }
 }
 
-// Info del album (JSON con assets y exifInfo)
+// Album info (JSON with assets and exifInfo)
 app.get('/api/album', async (_req, res) => {
   const url = `${IMMICH_URL}/api/albums/${ALBUM_ID}`;
   try {
@@ -74,31 +74,31 @@ app.get('/api/album', async (_req, res) => {
     res.send(text);
   } catch (err) {
     console.error('[album] error:', err.message);
-    res.status(502).json({ error: 'No se pudo obtener el album', detail: err.message });
+    res.status(502).json({ error: 'Could not fetch the album', detail: err.message });
   }
 });
 
-// Miniatura: size = thumbnail (pequena) | preview (mediana)
+// Thumbnail: size = thumbnail (small) | preview (medium)
 app.get('/api/thumb/:id', (req, res) => {
   const size = req.query.size === 'preview' ? 'preview' : 'thumbnail';
   return proxy(res, `/api/assets/${req.params.id}/thumbnail?size=${size}`);
 });
 
-// Imagen original (a tamano completo)
+// Original image (full size)
 app.get('/api/original/:id', (req, res) => {
   return proxy(res, `/api/assets/${req.params.id}/original`);
 });
 
-// Reproduccion de video (soporta Range para streaming)
+// Video playback (supports Range for streaming)
 app.get('/api/video/:id', (req, res) => {
   const headers = {};
   if (req.headers.range) headers.range = req.headers.range;
   return proxy(res, `/api/assets/${req.params.id}/video/playback`, { headers });
 });
 
-// Estaticos
+// Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => {
-  console.log(`\nTravel Photo Map en marcha:  http://localhost:${PORT}\n`);
+  console.log(`\nTravel Photo Map running:  http://localhost:${PORT}\n`);
 });

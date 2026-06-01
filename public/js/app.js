@@ -1,4 +1,4 @@
-// Orquestacion: carga el album, conecta mapa, timeline y visor.
+// Orchestration: loads the album, wires up map, timeline and viewer.
 import { loadAlbum, normalizeAssets } from './api.js';
 import { inferCoordinates } from './geo.js';
 import { MapView } from './map.js';
@@ -34,7 +34,7 @@ function selectIndex(index, { focusMap = true, openViewer = true } = {}) {
   else if (viewer.open) viewer.show(asset);
 }
 
-// --- Instancias ---
+// --- Instances ---
 const map = new MapView('map', (asset) => {
   const idx = state.assets.indexOf(asset);
   selectIndex(idx, { focusMap: false, openViewer: true });
@@ -68,14 +68,14 @@ function step(dir) {
 
 async function init() {
   try {
-    setStatus('Cargando album...');
+    setStatus('Loading album...');
     const album = await loadAlbum();
     let assets = normalizeAssets(album);
     assets = inferCoordinates(assets);
     state.assets = assets;
 
     if (!assets.length) {
-      setStatus('El album no tiene elementos o no se pudo leer.', true);
+      setStatus('The album has no items or could not be read.', true);
       return;
     }
 
@@ -85,13 +85,13 @@ async function init() {
     const onMap = assets.filter((a) => a.onMap).length;
     const noGps = assets.length - onMap;
     headerInfo.textContent =
-      `${assets.length} elementos \u00b7 ${onMap} en el mapa` +
-      (noGps ? ` \u00b7 ${noGps} solo en timeline` : '');
+      `${assets.length} items \u00b7 ${onMap} on the map` +
+      (noGps ? ` \u00b7 ${noGps} timeline only` : '');
 
     setStatus(null);
   } catch (err) {
     console.error(err);
-    setStatus(err.message || 'Error cargando el album.', true);
+    setStatus(err.message || 'Error loading the album.', true);
   }
 }
 

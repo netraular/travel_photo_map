@@ -1,4 +1,4 @@
-// Acceso a los endpoints del backend proxy.
+// Access to the backend proxy endpoints.
 
 export async function loadAlbum() {
   const res = await fetch('/api/album');
@@ -9,7 +9,7 @@ export async function loadAlbum() {
     } catch {
       /* ignore */
     }
-    throw new Error(`No se pudo cargar el album (HTTP ${res.status}). ${detail}`);
+    throw new Error(`Could not load the album (HTTP ${res.status}). ${detail}`);
   }
   return res.json();
 }
@@ -27,7 +27,7 @@ export function videoUrl(id) {
 }
 
 /**
- * Normaliza los assets del album a un modelo simple y ordenado por fecha.
+ * Normalizes the album assets into a simple model sorted by date.
  * @returns {Array<{id,type,date,lat,lng,city,country,fileName,hasGps}>}
  */
 export function normalizeAssets(album) {
