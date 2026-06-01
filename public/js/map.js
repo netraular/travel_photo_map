@@ -34,7 +34,7 @@ export class MapView {
     this.onSelect = onSelect;
     this.markers = new Map(); // assetId -> marker
 
-    this.map = L.map(elId, { zoomControl: true });
+    this.map = L.map(elId, { zoomControl: true, keyboard: false });
     L.tileLayer(TILE_URL, { attribution: TILE_ATTR, maxZoom: 19 }).addTo(this.map);
 
     this.cluster = L.markerClusterGroup({
@@ -148,14 +148,14 @@ export class MiniMap {
     this.route = (assets || []).filter((a) => a.onMap && a.mapLat != null);
   }
 
-  /** Draws the full trip path once (thin connecting line). */
+  /** Draws the full trip path once as a faint base line for context. */
   drawRoute() {
     if (this.routeLine || this.route.length < 2) return;
     const latlngs = this.route.map((a) => [a.mapLat, a.mapLng]);
     this.routeLine = L.polyline(latlngs, {
-      color: '#f2b705',
-      weight: 2,
-      opacity: 0.45,
+      color: '#9aa0ad',
+      weight: 1.5,
+      opacity: 0.3,
     }).addTo(this.map);
   }
 
@@ -169,7 +169,8 @@ export class MiniMap {
     this.ensure();
     this.drawRoute();
 
-    // Highlight the photos around the current one so the route ahead is visible.
+    // Highlight the local path: where you came from (grey) and where you go next
+    // (yellow), with the current photo as a red dot.
     if (this.windowLayer) this.windowLayer.remove();
     const idx = this.route.indexOf(asset);
     const layers = [];
@@ -177,22 +178,21 @@ export class MiniMap {
 
     if (idx >= 0) {
       const from = Math.max(0, idx - 3);
-      const to = Math.min(this.route.length, idx + 12);
-      for (let i = from; i < to; i++) {
+      const to = Math.min(this.route.length - 1, idx + 12);
+      const pastPts = [];
+      const futurePts = [];
+      for (let i = from; i <= to; i++) {
         const a = this.route[i];
-        pts.push([a.mapLat, a.mapLng]);
-        if (i === idx) continue;
-        // Upcoming photos brighter, past photos dimmer.
-        const ahead = i > idx;
-        layers.push(
-          L.circleMarker([a.mapLat, a.mapLng], {
-            radius: ahead ? 4 : 3,
-            color: ahead ? '#f2b705' : '#9aa0ad',
-            fillColor: ahead ? '#f2b705' : '#9aa0ad',
-            fillOpacity: ahead ? 0.9 : 0.6,
-            weight: 0,
-          })
-        );
+        const ll = [a.mapLat, a.mapLng];
+        pts.push(ll);
+        if (i <= idx) pastPts.push(ll);
+        if (i >= idx) futurePts.push(ll);
+      }
+      if (pastPts.length > 1) {
+        layers.push(L.polyline(pastPts, { color: '#9aa0ad', weight: 3, opacity: 0.85 }));
+      }
+      if (futurePts.length > 1) {
+        layers.push(L.polyline(futurePts, { color: '#f2b705', weight: 3, opacity: 0.95 }));
       }
     }
 
@@ -209,7 +209,7 @@ export class MiniMap {
 
     this.windowLayer = L.layerGroup(layers).addTo(this.map);
 
-    pts.push([asset.mapLat, asset.mapLng]);
+    if (pts.length === 0) pts.push([asset.mapLat, asset.mapLng]);
     if (pts.length > 1) {
       this.map.fitBounds(L.latLngBounds(pts).pad(0.3), { maxZoom: 12, animate: false });
     } else {

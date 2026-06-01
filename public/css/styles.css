@@ -136,18 +136,6 @@ body {
   max-height: 100%;
   object-fit: contain;
 }
-.viewer-caption {
-  position: absolute;
-  bottom: 14px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.55);
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 13px;
-  color: var(--text);
-  pointer-events: none;
-}
 
 .viewer-close,
 .viewer-nav,
@@ -316,7 +304,6 @@ body {
   display: flex;
   gap: 6px;
   overflow-x: auto;
-  overflow-x: overlay; /* float the scrollbar over the photos (Chromium) */
   overflow-y: hidden;
   padding: 8px 12px;
   scroll-behavior: smooth;
@@ -367,10 +354,7 @@ body {
 .timeline-track::-webkit-scrollbar {
   height: 8px;
 }
-.timeline-track::-webkit-scrollbar-track {
-  background: transparent;
-}
 .timeline-track::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--border);
   border-radius: 4px;
 }

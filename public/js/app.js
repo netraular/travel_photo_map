@@ -32,6 +32,9 @@ function selectIndex(index, { focusMap = true, openViewer = true } = {}) {
   if (focusMap && asset.onMap) map.focus(asset);
   if (openViewer) viewer.show(asset);
   else if (viewer.open) viewer.show(asset);
+
+  // A manual change should restart the slideshow countdown.
+  timeline.resetTimer();
 }
 
 // --- Instances ---
@@ -68,6 +71,53 @@ function step(dir) {
 
 // In map view the timeline arrows page the strip; while viewing they step.
 timeline.isViewerOpen = () => viewer.open;
+
+// Spacebar toggles the slideshow (ignored while typing in the interval field).
+document.addEventListener('keydown', (e) => {
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    timeline.togglePlay();
+    viewer.setPlaying(timeline.playing);
+    return;
+  }
+
+  // In map view, left/right move to the previous/next photo and up/down
+  // jump several photos at a time (the viewer has its own arrow handling).
+  if (!viewer.open) {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      moveSelection(-1);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      moveSelection(1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      moveSelection(-pageStep());
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      moveSelection(pageStep());
+    }
+  }
+});
+
+// How many photos an up/down "page" jump should move.
+function pageStep() {
+  const visible = timeline.visibleCount ? timeline.visibleCount() : 1;
+  return Math.max(2, visible - 1);
+}
+
+// Moves the timeline selection without opening the viewer.
+function moveSelection(dir) {
+  if (!state.assets.length) return;
+  const base = state.activeIndex < 0 ? 0 : state.activeIndex;
+  let next = base + dir;
+  next = Math.max(0, Math.min(state.assets.length - 1, next));
+  state.activeIndex = next;
+  timeline.setActive(next, false);
+}
 
 async function init() {
   try {

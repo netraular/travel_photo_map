@@ -77,7 +77,7 @@ export class Timeline {
     });
   }
 
-  setActive(index, fromExternal = true) {
+  setActive(index, fromExternal = true, align = 'center') {
     if (index < 0 || index >= this.assets.length) return;
     const items = this.track.children;
     if (this.activeIndex >= 0 && items[this.activeIndex]) {
@@ -87,7 +87,7 @@ export class Timeline {
     const el = items[index];
     if (el) {
       el.classList.add('active');
-      el.scrollIntoView({ inline: 'center', block: 'nearest' });
+      el.scrollIntoView({ inline: align, block: 'nearest' });
     }
     const a = this.assets[index];
     this.dateLabel.textContent = caption(a);
@@ -113,14 +113,15 @@ export class Timeline {
     }
   }
 
-  /** Moves by a full screen of thumbnails without opening the viewer. */
+  /** Moves by almost a full screen of thumbnails (keeps 1 for overlap). */
   page(dir) {
     if (!this.assets.length) return;
-    const count = this.visibleCount();
+    const count = Math.max(1, this.visibleCount() - 1);
     const base = this.activeIndex < 0 ? 0 : this.activeIndex;
     let next = base + dir * count;
     next = Math.max(0, Math.min(this.assets.length - 1, next));
-    this.setActive(next, false);
+    // Align to the left edge so exactly one photo overlaps between pages.
+    this.setActive(next, false, 'start');
   }
 
   step(dir) {
@@ -151,5 +152,12 @@ export class Timeline {
     this.playBtn.innerHTML = '&#9658;';
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
+  }
+
+  /** Restarts the countdown so manual navigation gets a full interval. */
+  resetTimer() {
+    if (!this.playing) return;
+    if (this.timer) clearInterval(this.timer);
+    this.timer = setInterval(() => this.step(1), this.intervalMs);
   }
 }

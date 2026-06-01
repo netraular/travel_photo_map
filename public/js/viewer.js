@@ -2,17 +2,6 @@
 import { originalUrl, videoUrl } from './api.js';
 import { MiniMap } from './map.js';
 
-function fmtDate(d) {
-  if (!d) return '';
-  return d.toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 export class Viewer {
   /**
    * @param {object} cb  { onPrev, onNext, onClose, onOpen, onTogglePlay }
@@ -25,7 +14,6 @@ export class Viewer {
     this.mapArea = document.getElementById('map-area');
     this.area = document.getElementById('viewer-area');
     this.content = document.getElementById('viewer-content');
-    this.caption = document.getElementById('viewer-caption');
     this.miniMap = new MiniMap('mini-map');
 
     document.getElementById('viewer-close').addEventListener('click', () => this.close());
@@ -65,10 +53,6 @@ export class Viewer {
       img.alt = asset.fileName || '';
       this.content.appendChild(img);
     }
-
-    const place = [asset.city, asset.country].filter(Boolean).join(', ');
-    const gpsNote = asset.inferred ? ' (approximate location)' : asset.onMap ? '' : ' (no GPS)';
-    this.caption.textContent = `${fmtDate(asset.date)}${place ? ' \u00b7 ' + place : ''}${gpsNote}`;
 
     this.miniMap.show(asset);
 
